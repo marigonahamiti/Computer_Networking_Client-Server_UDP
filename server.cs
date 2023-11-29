@@ -1,11 +1,23 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 
 class UDPServer
 {
     static void Main()
+    {
+        Task.Run(async () => await StartServerAsync());
+
+        // Keep the server running until the user presses Enter
+        Console.ReadLine();
+    }
+
+    static async Task StartServerAsync()
     {
         string serverName = "";
         int serverPort = 1200;
@@ -13,27 +25,159 @@ class UDPServer
         UdpClient serverS = new UdpClient(serverPort);
         Console.WriteLine($"Serveri eshte startuar ne localhost ne portin: {serverPort}");
 
-        HashSet<IPEndPoint> clients = new HashSet<IPEndPoint>();
+        List<IPEndPoint> clients = new List<IPEndPoint>();
+        int maxClients = 5;
 
-        while (clients.Count < 4)
+        while (clients.Count < maxClients)
         {
-            IPEndPoint clientAddress = new IPEndPoint(IPAddress.Any, 0);
-            byte[] data = serverS.Receive(ref clientAddress);
-            clients.Add(clientAddress);
+            UdpReceiveResult receiveResult = await serverS.ReceiveAsync();
+            IPEndPoint clientAddress = receiveResult.RemoteEndPoint;
+            byte[] data = receiveResult.Buffer;
 
-            Console.WriteLine($"Klienti u lidh me {clientAddress.Address} ne portin {clientAddress.Port}");
+            if (!clients.Contains(clientAddress))
+            {
+                clients.Add(clientAddress);
+                Console.WriteLine($"Klienti {clients.Count} u lidh me {clientAddress.Address} ne portin {clientAddress.Port}");
+            }
+
             string message = Encoding.UTF8.GetString(data);
-            Console.WriteLine($"Kerkesa nga klienti: {message}");
 
-            string messageK = message.ToUpper();
-            Console.WriteLine($"Pergjigja nga serveri: {messageK}");
+            if (message.StartsWith("FILE:"))
+            {
+                string fileName = message.Substring(5); // Remove the "FILE:" prefix
+                Console.WriteLine($"Received file content from client {clients.Count} for file: {fileName}");
 
-            byte[] responseData = Encoding.UTF8.GetBytes(messageK);
-            serverS.Send(responseData, responseData.Length, clientAddress);
+            }
+            else
+            {
+                Console.WriteLine($"Kerkesa nga klienti {clients.Count}: {message}");
+                if (message.StartsWith("WRITE:"))
+                {
+                    string fileName = message.Substring(6); // Remove the "WRITE:" prefix
+                    Console.WriteLine($"Received a request to write content to file: {fileName}");
+
+                    // Handle the request to write content to the file
+                    // For example, you can prompt the server to receive the content from the client.
+                    // Note: This example doesn't implement the content receiving part; you can customize it based on your needs.
+                }
+                // ... (existing code)
+
+                else if (message.StartsWith("OPEN:"))
+                {
+                    string fileName = message.Substring(5); // Remove the "OPEN:" prefix
+                    Console.WriteLine($"Received a request to open file: {fileName}");
+
+                    try
+                    {
+                        // Combine the file path with the server folder
+                        string filePath = Path.Combine(@"C:\Users\ZoneTech\Desktop\Projekti2_Rrjeta_Kompjuterike-main\test.txt", fileName);
+
+                        // Check if the file exists before attempting to open it
+                        if (File.Exists(filePath))
+                        {
+                            // Open the file using the default program associated with its type
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = filePath,
+                                UseShellExecute = true
+                            });
+                            Console.WriteLine($"File '{fileName}' opened successfully.");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"File '{fileName}' not found in the server folder.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error opening file: {ex.Message}");
+                    }
+                }
+
+                else if (message.StartsWith("EXECUTE:"))
+                {
+                string command = message.Substring(8); // Remove the "EXECUTE:" prefix
+                Console.WriteLine($"Received a request to execute command: {command}");
+
+                try
+                {
+                    string output = "";
+
+                    // Handle specific commands
+                    if (command.StartsWith("mkdr"))
+                    {
+                        // Extract the directory name from the command
+                        string dirName = command.Substring(5).Trim();
+
+                        // Create the directory
+                        Directory.CreateDirectory(dirName);
+
+                        output = $"Directory '{dirName}' created successfully.";
+                    }
+                    else if (command.StartsWith("ls"))
+                    {
+                        // Get the list of files in the server folder
+string[] files = Directory.GetFiles(@"C:\Users\ZoneTech\Desktop");
+                        output = string.Join(Environment.NewLine, files);
+                    }
+                    else
+                    {
+                        // Execute other commands using a process
+                        ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", $"/c {command}")
+                        {
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+
+                        using (Process process = new Process() { StartInfo = psi })
+                        {
+                            process.Start();
+
+                            // Read the output and error streams
+                            output = process.StandardOutput.ReadToEnd();
+                            string error = process.StandardError.ReadToEnd();
+
+                            // Append error to the output if there is any
+                            if (!string.IsNullOrEmpty(error))
+                                output += $"{Environment.NewLine}Error:{Environment.NewLine}{error}";
+                        }
+                    }
+
+                    // Send the output back to the client
+                    string response = $"Output:{Environment.NewLine}{output}";
+                    byte[] responseData = Encoding.UTF8.GetBytes(response);
+                    await serverS.SendAsync(responseData, responseData.Length, clientAddress);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error executing command: {ex.Message}");
+                }
+                }
+
+
+                else
+                {
+                    string messageK = message.ToUpper();
+                    Console.WriteLine($"Pergjigja nga serveri: {messageK}");
+
+                    byte[] responseData = Encoding.UTF8.GetBytes(messageK);
+                    await serverS.SendAsync(responseData, responseData.Length, clientAddress);
+                }
+            }
         }
 
         Console.WriteLine("Lista e klientave eshte mbushur!");
-        serverS.Close();
-    }
-}
 
+        // Inform clients that the list is full
+        foreach (var client in clients)
+        {
+            string fullMessage = "Server: Lista e klientave eshte mbushur!";
+            byte[] fullMessageData = Encoding.UTF8.GetBytes(fullMessage);
+            await serverS.SendAsync(fullMessageData, fullMessageData.Length, client);
+        }
+
+    }
+
+}
