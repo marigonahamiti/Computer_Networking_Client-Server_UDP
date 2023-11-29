@@ -42,7 +42,7 @@ class UDPClient
                     {
                         Console.Write("Enter the file name (e.g., hello.txt): ");
                         string fileName = Console.ReadLine();
-                        string filePath = Path.Combine(@"C:\Users\ZoneTech\Desktop\Projekti2_Rrjeta_Kompjuterike-main\TCP_Klienti\TCP_Klienti\\", fileName);
+                        string filePath = Path.Combine(@"C:\Users\milot\Computer_Networking_Gr24\", fileName);
 
                         if (File.Exists(filePath))
                         {
@@ -63,7 +63,7 @@ class UDPClient
                     {
                         Console.Write("Enter the file name to write (e.g., newfile.txt): ");
                         string fileName = Console.ReadLine();
-                        string filePath = Path.Combine(@"C:\Users\ZoneTech\Desktop\Projekti2_Rrjeta_Kompjuterike-main\TCP_Klienti\TCP_Klienti\\", fileName);
+                        string filePath = Path.Combine(@"C:\Users\milot\Computer_Networking_Gr24\", fileName);
 
                         Console.Write("Enter the content for the file: ");
                         string fileContent = Console.ReadLine();
@@ -122,7 +122,6 @@ class UDPClient
                         Console.WriteLine("Exiting the client.");
                         break;
                     } 
-                    // C:\Users\ZoneTech\Desktop\Projekti2_Rrjeta_Kompjuterike-main\TCP_Klienti\TCP_Klienti>
 
                     else
                     {
