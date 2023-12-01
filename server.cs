@@ -41,6 +41,38 @@ class UDPServer
             }
 
             string message = Encoding.UTF8.GetString(data);
+            if (message.StartsWith("CONNECT:"))
+            {
+                if (message.Equals("CONNECT:CLIENT"))
+                {
+                    Console.WriteLine($"Client connected from {clientAddress.Address} on port {clientAddress.Port}");
+                }
+                else if (message.StartsWith("CONNECT:ADMIN"))
+                {
+                    string[] adminCredentials = message.Substring(13).Split(':');
+                    string adminUsername = adminCredentials[0];
+                    string adminPassword = adminCredentials[1];
+
+                    if (adminUsername == "admin" && adminPassword == "admin123")
+                    {
+                        Console.WriteLine($"Admin connected from {clientAddress.Address} on port {clientAddress.Port}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Invalid ADMIN credentials from {clientAddress.Address} on port {clientAddress.Port}");
+                        byte[] invalidCredentialsMsg = Encoding.UTF8.GetBytes("Invalid ADMIN credentials");
+                        await serverS.SendAsync(invalidCredentialsMsg, invalidCredentialsMsg.Length, clientAddress);
+                        continue;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Invalid connection request from {clientAddress.Address} on port {clientAddress.Port}");
+                    byte[] invalidConnectionMsg = Encoding.UTF8.GetBytes("Invalid connection request");
+                    await serverS.SendAsync(invalidConnectionMsg, invalidConnectionMsg.Length, clientAddress);
+                    continue;
+                }
+            }
 
             if (message.StartsWith("FILE:"))
             {
