@@ -13,11 +13,43 @@ class UDPClient
 
         IPEndPoint serverAddress = new IPEndPoint(IPAddress.Any, 0);
         byte[] receivedData;
+        
+        Console.WriteLine("Choose the type of connection:");
+        Console.WriteLine("1. Connect as CLIENT");
+        Console.WriteLine("2. Connect as ADMIN");
+
+        Console.Write("Enter your choice (1 or 2): ");
+        string connectionChoice = Console.ReadLine();
+
+        string connectionMessage = "";
+        if (connectionChoice == "1")
+        {
+            connectionMessage = "CONNECT:CLIENT";
+        }
+        else if (connectionChoice == "2")
+        {
+            Console.Write("Enter the ADMIN username: ");
+            string username = Console.ReadLine();
+
+            Console.Write("Enter the ADMIN password: ");
+            string password = Console.ReadLine();
+
+            connectionMessage = $"CONNECT:ADMIN{username}:{password}";
+        }
+        else
+        {
+            Console.WriteLine("Invalid choice. Please enter 1 or 2.");
+            return;
+        }
 
         for (int i = 0; i < 5; i++)
         {
             using (UdpClient clientS = new UdpClient())
             {
+                
+                byte[] connectionData = Encoding.UTF8.GetBytes(connectionMessage);
+                clientS.Send(connectionData, connectionData.Length, serverName, serverPort);
+
                 while (true)
                 {
                     Console.WriteLine("Choose an option:");
