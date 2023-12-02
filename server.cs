@@ -9,12 +9,37 @@ using System.Threading.Tasks;
 
 class UDPServer
 {
+    private static IPEndPoint clientWithFullAccess = null;
+
     static void Main()
     {
         Task.Run(async () => await StartServerAsync());
 
         // Keep the server running until the user presses Enter
         Console.ReadLine();
+    }
+
+    private static bool VerifyClientAccess(IPEndPoint clientAddress, string authMessage)
+    {
+        if (authMessage.StartsWith("CONNECT:ADMIN"))
+        {
+            string[] adminCredentials = authMessage.Substring(13).Split(':');
+
+            // Ensure that the array has the expected length to avoid potential index out of range errors
+            if (adminCredentials.Length == 2)
+            {
+                string adminUsername = adminCredentials[0];
+                string adminPassword = adminCredentials[1];
+
+                // Check if the provided username and password match the expected admin credentials
+                if (adminUsername == "admin" && adminPassword == "admin123")
+                {
+                    return true; // Valid admin credentials
+                }
+            }
+        }
+
+        return false; // Invalid credentials
     }
 
     static async Task StartServerAsync()
@@ -43,6 +68,30 @@ class UDPServer
             string message = Encoding.UTF8.GetString(data);
             if (message.StartsWith("CONNECT:"))
             {
+                bool hasFullAccess = VerifyClientAccess(clientAddress, message);
+
+                if (hasFullAccess)
+                {
+                    Console.WriteLine($"Client {clientAddress.Address} has full access.");
+                    clientWithFullAccess = clientAddress;
+
+                    // Send a message to the client indicating full access
+                    byte[] fullAccessMessage = Encoding.UTF8.GetBytes("FULL_ACCESS");
+                    await serverS.SendAsync(fullAccessMessage, fullAccessMessage.Length, clientAddress);
+                }
+                else
+                {
+                    Console.WriteLine($"Client {clientAddress.Address} does not have full access.");
+
+                    // Send a message to the client indicating restricted access
+                    byte[] restrictedAccessMessage = Encoding.UTF8.GetBytes("RESTRICTED_ACCESS");
+                    await serverS.SendAsync(restrictedAccessMessage, restrictedAccessMessage.Length, clientAddress);
+
+                    // Handle the case where the client doesn't have full access
+                    // For example, you can send a message back to the client or take other actions.
+                    continue;
+                }
+
                 if (message.Equals("CONNECT:CLIENT"))
                 {
                     Console.WriteLine($"Client connected from {clientAddress.Address} on port {clientAddress.Port}");
@@ -60,10 +109,16 @@ class UDPServer
                     else
                     {
                         Console.WriteLine($"Invalid ADMIN credentials from {clientAddress.Address} on port {clientAddress.Port}");
-                        byte[] invalidCredentialsMsg = Encoding.UTF8.GetBytes("Invalid ADMIN credentials");
+
+                        // Send a message to the client indicating invalid credentials but granting regular access
+                        byte[] invalidCredentialsMsg = Encoding.UTF8.GetBytes("Invalid credentials, accessing as a regular client");
                         await serverS.SendAsync(invalidCredentialsMsg, invalidCredentialsMsg.Length, clientAddress);
+
+                        // Continue with regular client handling
+                        // For example, you can remove the 'else' statement to handle the invalid credentials as a regular client
                         continue;
                     }
+
                 }
                 else
                 {
@@ -102,7 +157,7 @@ class UDPServer
                     try
                     {
                         // Combine the file path with the server folder
-                        string filePath = Path.Combine(@"C:\Users\ZoneTech\Desktop\Projekti2_Rrjeta_Kompjuterike-main\test.txt", fileName);
+                        string filePath = Path.Combine(@"C:\Users\milot\source\repos\ServerSocket\SocketProgramming\ServerFolder\", fileName);
 
                         // Check if the file exists before attempting to open it
                         if (File.Exists(filePath))
@@ -128,66 +183,65 @@ class UDPServer
 
                 else if (message.StartsWith("EXECUTE:"))
                 {
-                string command = message.Substring(8); // Remove the "EXECUTE:" prefix
-                Console.WriteLine($"Received a request to execute command: {command}");
+                    string command = message.Substring(8); // Remove the "EXECUTE:" prefix
+                    Console.WriteLine($"Received a request to execute command: {command}");
 
-                try
-                {
-                    string output = "";
-
-                    // Handle specific commands
-                    if (command.StartsWith("mkdr"))
+                    try
                     {
-                        // Extract the directory name from the command
-                        string dirName = command.Substring(5).Trim();
+                        string output = "";
 
-                        // Create the directory
-                        Directory.CreateDirectory(dirName);
-
-                        output = $"Directory '{dirName}' created successfully.";
-                    }
-                    else if (command.StartsWith("ls"))
-                    {
-                        // Get the list of files in the server folder
-string[] files = Directory.GetFiles(@"C:\Users\ZoneTech\Desktop");
-                        output = string.Join(Environment.NewLine, files);
-                    }
-                    else
-                    {
-                        // Execute other commands using a process
-                        ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", $"/c {command}")
+                        // Handle specific commands
+                        if (command.StartsWith("mkdr"))
                         {
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        };
+                            // Extract the directory name from the command
+                            string dirName = command.Substring(5).Trim();
 
-                        using (Process process = new Process() { StartInfo = psi })
-                        {
-                            process.Start();
+                            // Create the directory
+                            Directory.CreateDirectory(dirName);
 
-                            // Read the output and error streams
-                            output = process.StandardOutput.ReadToEnd();
-                            string error = process.StandardError.ReadToEnd();
-
-                            // Append error to the output if there is any
-                            if (!string.IsNullOrEmpty(error))
-                                output += $"{Environment.NewLine}Error:{Environment.NewLine}{error}";
+                            output = $"Directory '{dirName}' created successfully.";
                         }
+                        else if (command.StartsWith("ls"))
+                        {
+                            // Get the list of files in the server folder
+                            string[] files = Directory.GetFiles(@"C:\Users\ZoneTech\Desktop");
+                            output = string.Join(Environment.NewLine, files);
+                        }
+                        else
+                        {
+                            // Execute other commands using a process
+                            ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", $"/c {command}")
+                            {
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true,
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            };
+
+                            using (Process process = new Process() { StartInfo = psi })
+                            {
+                                process.Start();
+
+                                // Read the output and error streams
+                                output = process.StandardOutput.ReadToEnd();
+                                string error = process.StandardError.ReadToEnd();
+
+                                // Append error to the output if there is any
+                                if (!string.IsNullOrEmpty(error))
+                                    output += $"{Environment.NewLine}Error:{Environment.NewLine}{error}";
+                            }
+                        }
+
+                        // Send the output back to the client
+                        string response = $"Output:{Environment.NewLine}{output}";
+                        byte[] responseData = Encoding.UTF8.GetBytes(response);
+                        await serverS.SendAsync(responseData, responseData.Length, clientAddress);
                     }
-
-                    // Send the output back to the client
-                    string response = $"Output:{Environment.NewLine}{output}";
-                    byte[] responseData = Encoding.UTF8.GetBytes(response);
-                    await serverS.SendAsync(responseData, responseData.Length, clientAddress);
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error executing command: {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error executing command: {ex.Message}");
-                }
-                }
-
 
                 else
                 {
@@ -209,5 +263,8 @@ string[] files = Directory.GetFiles(@"C:\Users\ZoneTech\Desktop");
             byte[] fullMessageData = Encoding.UTF8.GetBytes(fullMessage);
             await serverS.SendAsync(fullMessageData, fullMessageData.Length, client);
         }
-
     }
+}
+
+
+////
