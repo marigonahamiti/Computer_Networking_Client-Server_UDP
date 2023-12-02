@@ -16,7 +16,7 @@ class UDPServer
         // Keep the server running until the user presses Enter
         Console.ReadLine();
     }
- static IPEndPoint clientWithFullAccess = null;
+
     static async Task StartServerAsync()
     {
         string serverName = "";
@@ -56,7 +56,6 @@ class UDPServer
                     if (adminUsername == "admin" && adminPassword == "admin123")
                     {
                         Console.WriteLine($"Admin connected from {clientAddress.Address} on port {clientAddress.Port}");
-                        clientWithFullAccess = clientAddress;
                     }
                     else
                     {
@@ -106,64 +105,26 @@ class UDPServer
                         string filePath = Path.Combine(@"C:\Users\ZoneTech\Desktop\Projekti2_Rrjeta_Kompjuterike-main\test.txt", fileName);
 
                         // Check if the file exists before attempting to open it
-                  if (File.Exists(filePath))
-    {
-        if (clientWithFullAccess == null || clientAddress.Equals(clientWithFullAccess))
-        {
-            // Open the file using the default program associated with its type
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = filePath,
-                UseShellExecute = true
-            });
-            Console.WriteLine($"File '{fileName}' opened successfully.");
-        }
-        else
-        {
-            Console.WriteLine($"Access denied. Client {clientAddress.Address} does not have full access.");
-        }
-    }
-    else
-    {
-        Console.WriteLine($"File '{fileName}' not found in the server folder.");
-    }
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Error opening file: {ex.Message}");
-}
-if (message.StartsWith("GRANT_FULL_ACCESS:"))
-{
-    string clientIpAddress = message.Substring(18); // Remove the "GRANT_FULL_ACCESS:" prefix
-    IPEndPoint grantedClientAddress = new IPEndPoint(IPAddress.Parse(clientIpAddress), serverPort);
-
-    // Grant full access to the specified client
-    clientWithFullAccess = grantedClientAddress;
-    Console.WriteLine($"Full access granted to client {clientWithFullAccess.Address} on port {clientWithFullAccess.Port}");
-}
-else if (message.StartsWith("EXECUTE:"))
-{
-    string command = message.Substring(8); // Remove the "EXECUTE:" prefix
-    Console.WriteLine($"Received a request to execute command: {command}");
-
-    try
-    {
-        // ... (existing code)
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error executing command: {ex.Message}");
-    }
-}      
-else if (message.StartsWith("GRANT_FULL_ACCESS:"))
-{
-    string clientIpAddress = message.Substring(18); // Remove the "GRANT_FULL_ACCESS:" prefix
-    IPEndPoint grantedClientAddress = new IPEndPoint(IPAddress.Parse(clientIpAddress), serverPort);
-
-    // Grant full access to the specified client
-    clientWithFullAccess = grantedClientAddress;
-    Console.WriteLine($"Full access granted to client {clientWithFullAccess.Address} on port {clientWithFullAccess.Port}");
-}
+                        if (File.Exists(filePath))
+                        {
+                            // Open the file using the default program associated with its type
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = filePath,
+                                UseShellExecute = true
+                            });
+                            Console.WriteLine($"File '{fileName}' opened successfully.");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"File '{fileName}' not found in the server folder.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error opening file: {ex.Message}");
+                    }
+                }
 
                 else if (message.StartsWith("EXECUTE:"))
                 {
@@ -250,6 +211,3 @@ string[] files = Directory.GetFiles(@"C:\Users\ZoneTech\Desktop");
         }
 
     }
-
-    }   
-}
