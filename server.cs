@@ -47,8 +47,10 @@ class UDPServer
         string serverName = "";
         int serverPort = 1200;
 
-        UdpClient serverS = new UdpClient(serverPort);
-        Console.WriteLine($"Serveri eshte startuar ne localhost ne portin: {serverPort}");
+        IPAddress ipv4Address = IPAddress.Parse("192.168.0.23");
+        UdpClient serverS = new UdpClient(new IPEndPoint(ipv4Address, serverPort));
+        Console.WriteLine($"Serveri eshte startuar ne IP adresen: {ipv4Address}, portin: {serverPort}");
+
 
         List<IPEndPoint> clients = new List<IPEndPoint>();
         int maxClients = 5;
