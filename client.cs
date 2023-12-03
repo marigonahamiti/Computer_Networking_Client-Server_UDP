@@ -59,18 +59,23 @@ class UDPClient
                         string connectionResponse = Encoding.UTF8.GetString(receivedData);
 
                         // Check if the client has full access
-                        bool hasFullAccess = connectionResponse.StartsWith("FULL_ACCESS");
+                        bool hasFullAccess = connectionResponse.Contains("FULL_ACCESS");
 
+
+                    while(true)
+                    {
                         if (hasFullAccess)
                         {
+                            
                             Console.WriteLine("Choose an option:");
                             Console.WriteLine("1. Enter a message");
                             Console.WriteLine("2. Read a file");
                             Console.WriteLine("3. Write to a file");
                             Console.WriteLine("4. Execute a command");
-                            Console.WriteLine("5. Exit");
+                            Console.WriteLine("5. Exit");  
                         }
-                        else
+                    
+                        else if(!hasFullAccess)
                         {
                             Console.WriteLine("Choose an option:");
                             Console.WriteLine("1. Enter a message");
@@ -85,7 +90,8 @@ class UDPClient
                         // (Note: You may need to adjust the logic based on your specific requirements.)
 
                         if (hasFullAccess)
-                        {
+                        { 
+
                             // Handle options for clients with full access
                             if (choice == "1")
                             {
@@ -95,11 +101,11 @@ class UDPClient
                                 byte[] data = Encoding.UTF8.GetBytes(message);
                                 clientS.Send(data, data.Length, serverName, serverPort);
                             }
-                            else if (choice == "2")
+                              else if (choice == "2")
                             {
                                 Console.Write("Enter the file name (e.g., hello.txt): ");
                                 string fileName = Console.ReadLine();
-                                string filePath = Path.Combine(@"C:\Users\milot\source\repos\ServerSocket\SocketProgramming\ServerFolder\", fileName);
+                                string filePath = Path.Combine(@"C:\Users\ZoneTech\Desktop\Detyra2\", fileName);
 
                                 if (File.Exists(filePath))
                                 {
@@ -119,7 +125,7 @@ class UDPClient
                             {
                                 Console.Write("Enter the file name to write (e.g., newfile.txt): ");
                                 string fileName = Console.ReadLine();
-                                string filePath = Path.Combine(@"C:\Users\milot\source\repos\ServerSocket\SocketProgramming\ServerFolder\", fileName);
+                                string filePath = Path.Combine(@"C:\Users\ZoneTech\Desktop\Detyra2\", fileName);
 
                                 Console.Write("Enter the content for the file: ");
                                 string fileContent = Console.ReadLine();
@@ -173,14 +179,14 @@ class UDPClient
                             else if (choice == "5")
                             {
                                 Console.WriteLine("Exiting the client.");
-                                break;
+                                return;
                             }
                             else
                             {
                                 Console.WriteLine("Invalid choice. Please enter a number between 1 and 5.");
                             }
                         }
-                        else
+                        else if(!hasFullAccess)
                         {
                             // Handle options for clients without full access
                             if (choice == "1")
@@ -195,7 +201,7 @@ class UDPClient
                             {
                                 Console.Write("Enter the file name (e.g., hello.txt): ");
                                 string fileName = Console.ReadLine();
-                                string filePath = Path.Combine(@"C:\Users\milot\source\repos\ServerSocket\SocketProgramming\ServerFolder\", fileName);
+                                string filePath = Path.Combine(@"C:\Users\ZoneTech\Desktop\Detyra2\", fileName);
 
                                 if (File.Exists(filePath))
                                 {
@@ -214,7 +220,7 @@ class UDPClient
                             else if (choice == "3")
                             {
                                 Console.WriteLine("Exiting the client.");
-                                break;
+                                return;
                             }
                             else
                             {
@@ -223,11 +229,16 @@ class UDPClient
                         }
 
                         // Receive and display the response from the server
+                        byte[] choiceData = Encoding.UTF8.GetBytes(choice);
+                        clientS.Send(choiceData, choiceData.Length, serverAddress);
+
+                        // Receive and display the response from the server
                         receivedData = clientS.Receive(ref serverAddress);
                         string modifiedMessage = Encoding.UTF8.GetString(receivedData);
 
                         Console.WriteLine("Response from the server: " + modifiedMessage);
                     }
+                }
                 }
                 catch (Exception ex)
                 {
