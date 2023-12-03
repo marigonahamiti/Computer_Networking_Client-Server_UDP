@@ -157,7 +157,7 @@ class UDPServer
                     try
                     {
                         // Combine the file path with the server folder
-                        string filePath = Path.Combine(@"C:\Users\milot\source\repos\ServerSocket\SocketProgramming\ServerFolder\", fileName);
+                        string filePath = Path.Combine(@"C:\Users\ZoneTech\Desktop\Detyra2\", fileName);
 
                         // Check if the file exists before attempting to open it
                         if (File.Exists(filePath))
@@ -265,6 +265,3 @@ class UDPServer
         }
     }
 }
-
-
-////
